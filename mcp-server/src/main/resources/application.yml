@@ -27,10 +27,10 @@ docs:
 # auth-type: BASIC (username/password) or BEARER (token). Credentials should come from the environment.
 sailpoint:
   scim:
-    base-url: ${SAILPOINT_SCIM_BASE_URL:${SAILPOINT_BASE_URL:http://20.203.2.97:8080}}
+    base-url: ${SAILPOINT_SCIM_BASE_URL:${SAILPOINT_BASE_URL:}}
     auth-type: ${SAILPOINT_SCIM_AUTH_TYPE:BASIC}
-    username: ${SAILPOINT_SCIM_USERNAME:${SAILPOINT_USERNAME:spadmin}}
-    password: ${SAILPOINT_SCIM_PASSWORD:${SAILPOINT_PASSWORD:admin}}
+    username: ${SAILPOINT_SCIM_USERNAME:${SAILPOINT_USERNAME:}}
+    password: ${SAILPOINT_SCIM_PASSWORD:${SAILPOINT_PASSWORD:}}
     bearer-token: ${SAILPOINT_SCIM_BEARER_TOKEN:}
     base-path: ${SAILPOINT_SCIM_BASE_PATH:/identityiq/scim/v2}
     max-response-chars: ${SAILPOINT_SCIM_MAX_RESPONSE_CHARS:20000}

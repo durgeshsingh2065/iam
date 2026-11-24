@@ -1,0 +1,110 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: iam-agent
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# LLM provider configuration (all calls go through Spring AI)
+llm:
+  provider: ${LLM_PROVIDER:anthropic}          # anthropic | openai | opencode | ollama | azure-openai | mistral | deepseek | minimax | zhipuai | bedrock | vertex-ai
+  system-prompt-path: ${LLM_SYSTEM_PROMPT_PATH:}
+  max-tool-iterations: ${LLM_MAX_TOOL_ITERATIONS:12}
+  # Skip TLS chain verification for LLM hosts (corporate proxy / on-prem gateway). Off by default.
+  trust-all-certs: ${LLM_TRUST_ALL_CERTS:false}
+  # All providers live here and are selected with LLM_PROVIDER=<name>. Only the selected one is used.
+  # api-key is a fallback; normally the logged-in user's own token is used.
+  providers:
+    anthropic:                # Claude 
+      api-url: ${ANTHROPIC_API_URL:https://anthropic.com}
+      api-key: ${ANTHROPIC_API_KEY:sk-34dfghjjgfdssws}
+      model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+      max-tokens: ${ANTHROPIC_MAX_TOKENS:8192}
+      read-timeout-seconds: ${ANTHROPIC_READ_TIMEOUT_SECONDS:120}
+    openai:                   # OpenAI, or any OpenAI-compatible gateway
+      api-url: ${OPENAI_API_URL:https://api.openai.com}
+      completions-path: ${OPENAI_COMPLETIONS_PATH:/v1/chat/completions}
+      api-key: ${OPENAI_API_KEY:}
+      model: ${OPENAI_MODEL:gpt-4o}
+      max-tokens: ${OPENAI_MAX_TOKENS:4096}
+      read-timeout-seconds: ${OPENAI_READ_TIMEOUT_SECONDS:120}
+    opencode:                 # OpenCode AI (https://opencode.ai), OpenAI Chat Completions format
+      api-url: ${OPENCODE_API_URL:https://opencode.ai}
+      completions-path: ${OPENCODE_API_PATH:/zen/v1/chat/completions}
+      api-key: ${OPENCODE_API_KEY:}
+      model: ${OPENCODE_MODEL:deepseek-v4-flash-free}
+      max-tokens: ${OPENCODE_MAX_TOKENS:4096}
+      read-timeout-seconds: ${OPENCODE_READ_TIMEOUT_SECONDS:120}
+    ollama:                   # local, no internet and no token required
+      api-url: ${OLLAMA_API_URL:http://localhost:11434}
+      model: ${OLLAMA_MODEL:qwen2.5:7b-instruct-q4_K_M}
+      max-tokens: ${OLLAMA_MAX_TOKENS:4096}
+      read-timeout-seconds: ${OLLAMA_READ_TIMEOUT_SECONDS:600}
+    azure-openai:             # api-url = Azure resource endpoint, model = deployment name
+      api-url: ${AZURE_OPENAI_ENDPOINT:}
+      api-key: ${AZURE_OPENAI_API_KEY:}
+      model: ${AZURE_OPENAI_DEPLOYMENT:}
+      max-tokens: ${AZURE_OPENAI_MAX_TOKENS:4096}
+    mistral:
+      api-url: ${MISTRAL_API_URL:https://api.mistral.ai}
+      api-key: ${MISTRAL_API_KEY:}
+      model: ${MISTRAL_MODEL:mistral-large-latest}
+      max-tokens: ${MISTRAL_MAX_TOKENS:4096}
+    deepseek:
+      api-url: ${DEEPSEEK_API_URL:https://api.deepseek.com}
+      api-key: ${DEEPSEEK_API_KEY:}
+      model: ${DEEPSEEK_MODEL:deepseek-chat}
+      max-tokens: ${DEEPSEEK_MAX_TOKENS:4096}
+    minimax:
+      api-url: ${MINIMAX_API_URL:https://api.minimax.chat}
+      api-key: ${MINIMAX_API_KEY:}
+      model: ${MINIMAX_MODEL:}
+      max-tokens: ${MINIMAX_MAX_TOKENS:4096}
+    zhipuai:
+      api-url: ${ZHIPUAI_API_URL:https://open.bigmodel.cn/api/paas}
+      api-key: ${ZHIPUAI_API_KEY:}
+      model: ${ZHIPUAI_MODEL:}
+      max-tokens: ${ZHIPUAI_MAX_TOKENS:4096}
+    bedrock:                  # token format: accessKeyId:secretAccessKey[:sessionToken]
+      region: ${AWS_REGION:us-east-1}
+      api-key: ${BEDROCK_CREDENTIALS:}
+      model: ${BEDROCK_MODEL:}
+      max-tokens: ${BEDROCK_MAX_TOKENS:4096}
+    vertex-ai:                # uses Google Application Default Credentials
+      project-id: ${VERTEX_PROJECT_ID:}
+      location: ${VERTEX_LOCATION:us-central1}
+      model: ${VERTEX_MODEL:gemini-2.0-flash}
+      max-tokens: ${VERTEX_MAX_TOKENS:4096}
+
+# MCP Server connection
+mcp:
+  server:
+    url: ${MCP_SERVER_URL:http://localhost:8081}
+    api-key: ${MCP_SERVER_API_KEY}
+    connect-timeout: 10s
+    read-timeout: 60s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.iam.assistant: INFO
+  # Log files go to LOG_DIR (created if missing). Set LOG_DIR to any directory you want.
+  file:
+    name: ${LOG_DIR:./logs}/iam-agent.log
+  logback:
+    rollingpolicy:
+      max-file-size: ${LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${LOG_MAX_HISTORY:30}
+      total-size-cap: ${LOG_TOTAL_SIZE_CAP:1GB}

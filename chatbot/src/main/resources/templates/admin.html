@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>User Management — IAM Assistant</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: #0052CC;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.25);
+            flex-shrink: 0;
+        }
+        .header-title { font-size: 1rem; font-weight: 700; letter-spacing: -.01em; }
+        .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+        .badge { background: rgba(255,255,255,.15); font-size: .7rem; padding: 3px 10px;
+                 border-radius: 12px; border: 1px solid rgba(255,255,255,.3); }
+        .header-link {
+            font-size: .78rem; color: rgba(255,255,255,.85); text-decoration: none;
+            padding: 5px 12px; border: 1px solid rgba(255,255,255,.3); border-radius: 12px;
+            transition: all .15s;
+        }
+        .header-link:hover { background: rgba(255,255,255,.15); color: white; }
+
+        .container { max-width: 1000px; margin: 32px auto; padding: 0 24px; width: 100%; }
+
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .page-title { font-size: 1.4rem; font-weight: 700; color: #172B4D; }
+        .page-subtitle { font-size: .85rem; color: #6B778C; margin-top: 2px; }
+
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 6px; font-size: .85rem;
+            font-weight: 600; cursor: pointer; transition: all .15s;
+        }
+        .btn-primary { background: #0052CC; color: white; }
+        .btn-primary:hover { background: #0065FF; }
+        .btn-sm { padding: 5px 12px; font-size: .78rem; border-radius: 5px; }
+        .btn-edit { background: #DEEBFF; color: #0052CC; border: 1px solid #B3D4FF; }
+        .btn-edit:hover { background: #B3D4FF; }
+        .btn-danger { background: #FFEBE6; color: #BF2600; border: 1px solid #FFBDAD; }
+        .btn-danger:hover { background: #FFBDAD; }
+        .btn-copy { background: #F4F5F7; color: #42526E; border: 1px solid #DFE1E6; }
+        .btn-copy:hover { background: #DFE1E6; }
+
+        .card {
+            background: white; border-radius: 8px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.1); overflow: hidden;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #F4F5F7; }
+        th { padding: 11px 16px; text-align: left; font-size: .78rem; font-weight: 700;
+             color: #42526E; letter-spacing: .04em; text-transform: uppercase;
+             border-bottom: 2px solid #DFE1E6; }
+        td { padding: 13px 16px; font-size: .88rem; color: #172B4D;
+             border-bottom: 1px solid #F4F5F7; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #FAFBFC; }
+
+        .role-badge {
+            display: inline-block; padding: 2px 10px; border-radius: 10px;
+            font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+        }
+        .role-admin { background: #EAE6FF; color: #403294; }
+        .role-user  { background: #DEEBFF; color: #0052CC; }
+        .status-active   { color: #006644; font-weight: 600; font-size: .82rem; }
+        .status-disabled { color: #BF2600; font-weight: 600; font-size: .82rem; }
+
+        .token-cell { display: flex; align-items: center; gap: 6px; }
+        .token-text {
+            font-family: 'Courier New', monospace; font-size: .78rem; color: #6B778C;
+            max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .actions-cell { display: flex; gap: 6px; align-items: center; }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(9,30,66,.5);
+            z-index: 100; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: white; border-radius: 8px; padding: 28px 32px; width: 100%;
+            max-width: 460px; box-shadow: 0 8px 32px rgba(0,0,0,.24);
+        }
+        .modal-title { font-size: 1.15rem; font-weight: 700; color: #172B4D; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: .82rem; font-weight: 600;
+                            color: #172B4D; margin-bottom: 5px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 9px 12px; border: 2px solid #DFE1E6; border-radius: 5px;
+            font-size: .88rem; color: #172B4D; outline: none; transition: border-color .15s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #0052CC; }
+        .form-group input:read-only { background: #F4F5F7; cursor: default; }
+        .token-row { display: flex; gap: 6px; }
+        .token-row input { flex: 1; }
+        .hint { font-size: .75rem; color: #6B778C; margin-top: 4px; }
+        .enabled-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .enabled-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+            border-radius: 6px; font-size: .85rem; font-weight: 600;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2); z-index: 200;
+            transition: opacity .3s; opacity: 0;
+        }
+        .toast.show { opacity: 1; }
+        .toast-success { background: #E3FCEF; color: #006644; border: 1px solid #79F2C0; }
+        .toast-error   { background: #FFEBE6; color: #BF2600; border: 1px solid #FF8F73; }
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-title">IAM Assistant</div>
+    <span class="badge">Powered by IAM</span>
+    <div class="header-right">
+        <a href="/" class="header-link">&#8592; Back to Chat</a>
+        <a href="/logout" class="header-link">Sign out</a>
+    </div>
+</header>
+
+<div class="container">
+    <div class="page-header">
+        <div>
+            <div class="page-title">User Management</div>
+            <div class="page-subtitle">Add, edit, and manage user accounts and API tokens.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Add User</button>
+    </div>
+
+    <div class="card">
+        <table id="users-table">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>API Token</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                <tr><td colspan="5" style="text-align:center;color:#6B778C;padding:24px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay" id="user-modal">
+    <div class="modal-card">
+        <div class="modal-title" id="modal-title">Add User</div>
+        <div class="form-group">
+            <label for="f-username">Username</label>
+            <input id="f-username" type="text" placeholder="e.g. john.doe" autocomplete="off"/>
+        </div>
+        <div class="form-group">
+            <label for="f-password">Password</label>
+            <input id="f-password" type="password" placeholder="Enter password" autocomplete="new-password"/>
+            <div class="hint" id="pw-hint" style="display:none">Leave blank to keep current password.</div>
+        </div>
+        <div class="form-group">
+            <label for="f-role">Role</label>
+            <select id="f-role">
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
+            </select>
+        </div>
+        <div class="form-group" id="token-group" style="display:none">
+            <label>API Token</label>
+            <div class="token-row">
+                <input id="f-token" type="text" placeholder="Paste or generate a token"/>
+                <button class="btn btn-sm btn-copy" type="button" onclick="copyToken()">Copy</button>
+            </div>
+            <div class="hint">Paste the user's API key here (e.g. from their LLM provider).</div>
+        </div>
+        <div class="form-group" id="enabled-group" style="display:none">
+            <label class="enabled-row">
+                <input id="f-enabled" type="checkbox" checked/>
+                <span>Account enabled</span>
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveUser()">Save</button>
+            <button class="btn" style="background:#F4F5F7;color:#42526E;border:1px solid #DFE1E6"
+                    onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+    const csrf = {
+        token: document.querySelector('meta[name="_csrf"]').content,
+        header: document.querySelector('meta[name="_csrf_header"]').content
+    };
+
+    let editingUsername = null;
+    let currentUsername = null;
+
+    // ── Bootstrap ──
+    fetch('/me', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(u => { currentUsername = u.username; })
+        .catch(() => { window.location.href = '/login'; });
+
+    loadUsers();
+
+    async function loadUsers() {
+        const res = await fetch('/api/admin/users', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', [csrf.header]: csrf.token }
+        });
+        if (!res.ok) { showToast('Failed to load users', 'error'); return; }
+        const users = await res.json();
+        renderTable(users);
+    }
+
+    function renderTable(users) {
+        const tbody = document.getElementById('users-tbody');
+        if (!users.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6B778C;padding:24px;">No users found.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td><strong>${escHtml(u.username)}</strong></td>
+                <td><span class="role-badge ${u.role === 'ADMIN' ? 'role-admin' : 'role-user'}">${escHtml(u.role)}</span></td>
+                <td>
+                    <div class="token-cell">
+                        <span class="token-text" title="${escHtml(u.apiToken)}">${escHtml(u.apiToken)}</span>
+                        <button class="btn btn-sm btn-copy" onclick="copyText('${escHtml(u.apiToken)}')">Copy</button>
+                    </div>
+                </td>
+                <td><span class="${u.enabled ? 'status-active' : 'status-disabled'}">${u.enabled ? 'Active' : 'Disabled'}</span></td>
+                <td>
+                    <div class="actions-cell">
+                        <button class="btn btn-sm btn-edit" onclick='openEditModal(${JSON.stringify(u)})'>Edit</button>
+                        ${u.username !== currentUsername
+                            ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${escHtml(u.username)}')">Delete</button>`
+                            : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // ── Modal ──
+    function openAddModal() {
+        editingUsername = null;
+        document.getElementById('modal-title').textContent = 'Add User';
+        document.getElementById('f-username').value = '';
+        document.getElementById('f-username').readOnly = false;
+        document.getElementById('f-password').value = '';
+        document.getElementById('f-password').placeholder = 'Enter password';
+        document.getElementById('pw-hint').style.display = 'none';
+        document.getElementById('f-role').value = 'USER';
+        document.getElementById('f-token').value = '';
+        document.getElementById('token-group').style.display = 'none';
+        document.getElementById('enabled-group').style.display = 'none';
+        document.getElementById('user-modal').classList.add('open');
+        document.getElementById('f-username').focus();
+    }
+
+    function openEditModal(user) {
+        editingUsername = user.username;
+        document.getElementById('modal-title').textContent = 'Edit User';
+        document.getElementById('f-username').value = user.username;
+        document.getElementById('f-username').readOnly = true;
+        document.getElementById('f-password').value = '';
+        document.getElementById('f-password').placeholder = 'Leave blank to keep current';
+        document.getElementById('pw-hint').style.display = 'block';
+        document.getElementById('f-role').value = user.role;
+        document.getElementById('f-token').value = user.apiToken;
+        document.getElementById('token-group').style.display = 'block';
+        document.getElementById('enabled-group').style.display = 'block';
+        document.getElementById('f-enabled').checked = user.enabled;
+        document.getElementById('user-modal').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('user-modal').classList.remove('open');
+    }
+
+    document.getElementById('user-modal').addEventListener('click', e => {
+        if (e.target === document.getElementById('user-modal')) closeModal();
+    });
+
+    async function saveUser() {
+        const username = document.getElementById('f-username').value.trim();
+        const password = document.getElementById('f-password').value;
+        const role     = document.getElementById('f-role').value;
+        const enabled  = document.getElementById('f-enabled').checked;
+
+        const apiToken = document.getElementById('f-token').value.trim();
+
+        if (!editingUsername && !username) { showToast('Username is required', 'error'); return; }
+
+        let res;
+        if (editingUsername) {
+            res = await fetch(`/api/admin/users/${encodeURIComponent(editingUsername)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                body: JSON.stringify({ password, role, enabled, apiToken })
+            });
+        } else {
+            if (!password) { showToast('Password is required', 'error'); return; }
+            res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', [csrf.header]: csrf.token },
+                body: JSON.stringify({ username, password, role })
+            });
+        }
+
+        if (res.ok) {
+            closeModal();
+            showToast(editingUsername ? 'User updated' : 'User created', 'success');
+            loadUsers();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.error || 'Operation failed', 'error');
+        }
+    }
+
+    async function deleteUser(username) {
+        if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+        const res = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE',
+            headers: { [csrf.header]: csrf.token }
+        });
+        if (res.ok) {
+            showToast('User deleted', 'success');
+            loadUsers();
+        } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.error || 'Delete failed', 'error');
+        }
+    }
+
+    function copyToken() {
+        copyText(document.getElementById('f-token').value);
+    }
+
+    function copyText(text) {
+        if (!text) return;
+        navigator.clipboard.writeText(text)
+            .then(() => showToast('Copied to clipboard', 'success'))
+            .catch(() => showToast('Copy failed', 'error'));
+    }
+
+    // ── Toast ──
+    let toastTimer;
+    function showToast(msg, type) {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className = `toast toast-${type} show`;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3000);
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+</script>
+</body>
+</html>

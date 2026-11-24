@@ -1,0 +1,52 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    session:
+      timeout: 8h
+
+spring:
+  application:
+    name: iam-chatbot
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  thymeleaf:
+    cache: false
+
+# MCP Agent connection
+mcp:
+  agent:
+    url: ${MCP_AGENT_URL:http://localhost:8082}
+    connect-timeout: 5s
+    read-timeout: 120s
+
+# Session, auth, and storage
+chatbot:
+  session:
+    max-history: 30
+    ttl-minutes: 60
+    max-sessions-per-user: 20
+  auth:
+    admin-username: ${CHATBOT_ADMIN_USERNAME:admin}
+    admin-password: ${CHATBOT_ADMIN_PASSWORD:admin123}
+  storage:
+    path: ${CHATBOT_STORAGE_PATH:./data/chatbot}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.iam.assistant: INFO
+  # Log files go to LOG_DIR (created if missing). Set LOG_DIR to any directory you want.
+  file:
+    name: ${LOG_DIR:./logs}/iam-chatbot.log
+  logback:
+    rollingpolicy:
+      max-file-size: ${LOG_MAX_FILE_SIZE:10MB}
+      max-history: ${LOG_MAX_HISTORY:30}
+      total-size-cap: ${LOG_TOTAL_SIZE_CAP:1GB}
